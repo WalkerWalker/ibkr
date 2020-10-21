@@ -9,6 +9,37 @@ import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
+class Contract:
+    def __init__(self, conid, ticker, expire, callput, strike, multiplier=100, currency="USD"):
+        self.conid = conid
+        self.ticker = ticker
+        self.expire = expire
+        self.callput = callput
+        self.strike = strike
+        self.multiplier = multiplier
+        self.currency = currency
+
+
+class Position:
+    def __init__(self, contract, size, opendate, premium, fee):
+        self.contract = contract
+        self.size = size
+        self.opendate = opendate
+        self.premium = premium
+        self.fee = fee
+
+    def updatePrice(self, stockPrice, optionPrice):
+        #TODO
+        pass
+
+class Order:
+    def __init__(self, contract, size, price, side, tif="DAY"):
+        self.contract = contract
+        self.size = size
+        self.price = price
+        self.side = side
+        self.tif = tif
+
 def getAccountId():
     url = baseUrl + "/portfolio/accounts"
     content = requests.get(url, verify=False)

@@ -62,6 +62,26 @@ def getPositions(accountId):
 
     return positions
 
+def getLastPrice(conids):
+    #TODO do a better job at authentication
+    url = baseUrl + "/iserver/reauthenticate"
+    content = requests.post(url, verify=False)
+
+    url = baseUrl + "/iserver/accounts"
+    content = requests.get(url, verify=False)
+
+    url = baseUrl + "/iserver/marketdata/snapshot"
+    delimiter = ','
+    conids_list = delimiter.join(conids)
+    params ={"conids": conids_list,
+             "fields": "31"}
+    content = requests.get(url, params, verify=False)
+    content = requests.get(url, params, verify=False)  # run twice to get it right.
+    price_values = []
+    for item in content.json():
+        price_values.append({item['conid']: item['31']})
+    return price_values
+
 def getDateAndTime():
     now = datetime.now()
     return now.strftime("%d/%m/%Y %H:%M:%S")
@@ -90,7 +110,8 @@ def writeGoogleSheet(positions):
     spreadsheet.values_append(sheetName, {'valueInputOption': 'USER_ENTERED'}, {'values': rows})
 
 
-accountId = getAccountId()
-positions = getPositions(accountId)
-writeGoogleSheet(positions)
-
+#accountId = getAccountId()
+#positions = getPositions(accountId)
+#writeGoogleSheet(positions)
+r = getLastPrice(["265598","37018770", "4762", "2586156"])
+print(r)

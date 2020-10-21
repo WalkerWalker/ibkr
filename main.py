@@ -1,6 +1,7 @@
 import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
 
 baseUrl = "https://localhost:5000/v1/portal"
 
@@ -26,6 +27,10 @@ def getPositions(accountId):
 
     return positions
 
+def getDateAndTime():
+    now = datetime.now()
+    return now.strftime("%d/%m/%Y %H:%M:%S")
+
 def writeGoogleSheet(positions):
     spreadSheetName = "Options Tracker"
     sheetName = "Positions"
@@ -42,8 +47,8 @@ def writeGoogleSheet(positions):
     sheet.append_row(headers)
     rows = []
     for pos in positions:
-        row = []
-        for h in headers:
+        row = [getDateAndTime()]
+        for h in headers[1:]:
             value = str(pos[h]) if h in pos.keys() else ""
             row.append(value)
         rows.append(row)

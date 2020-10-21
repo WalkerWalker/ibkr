@@ -5,6 +5,10 @@ from datetime import datetime
 
 baseUrl = "https://localhost:5000/v1/portal"
 
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+urllib3.disable_warnings(category=InsecureRequestWarning)
+
 def getAccountId():
     url = baseUrl + "/portfolio/accounts"
     content = requests.get(url, verify=False)

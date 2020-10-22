@@ -54,6 +54,7 @@ class IBClient:
             print('-' * 80)
             print('')
 
+    @staticmethod
     def _prepare_arguments_list(self, parameter_list: List[str]) -> str:
         """Prepares the arguments for the request.
         Some endpoints can take multiple values for a parameter, this

@@ -8,6 +8,8 @@ import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
+from typing import Dict
+from typing import List
 
 class Contract:
     def __init__(self, conid, ticker, expire, callput, strike, multiplier=100, currency="USD"):
@@ -21,17 +23,21 @@ class Contract:
 
 
 class Position:
-    def __init__(self, contract, size, opendate, premium, fee):
+    def __init__(self, contract, size, opendate, avgPrice):
         self.contract = contract
         self.size = size
         self.opendate = opendate
-        self.premium = premium
-        self.fee = fee
+        self.avgPrice = avgPrice
 
     def update_price(self, stockPrice, optionPrice):
         #TODO
         pass
 
+    @staticmethod
+    def parse_json(json: Dict):
+        #todo add check if field is there
+        conid = json["conid"]
+        pprint(json)
 
 class Order:
     def __init__(self, contract, size, price, side, tif="DAY"):
@@ -53,8 +59,7 @@ def get_positions(client:IBClient, account_id):
     positions = []
     while True:
         response = client.portfolio_account_positions(account_id=account_id, page_id=page_id)
-        for pos in response:
-            positions.append(pos)
+        positions.extend(response)
         if len(response) == 30:
             page_id += 1
         else:
@@ -100,7 +105,9 @@ def main():
 
     account_id = get_account_id(client)
     positions = get_positions(client, account_id)
-    pprint(positions)
+    Position.parse_json(positions[0])
+    #pprint(positions)
+
     #write_google_sheet()Sheet(positions)
     #conids = ["265598","37018770", "4762", "2586156"]
     #r = client.market_data(conids)

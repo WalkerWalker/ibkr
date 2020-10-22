@@ -2,8 +2,8 @@ import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
-
-baseUrl = "https://localhost:5000/v1/portal"
+from IBClient import IBClient
+from pprint import pprint
 
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
@@ -40,29 +40,27 @@ class Order:
         self.side = side
         self.tif = tif
 
-def getAccountId():
-    url = baseUrl + "/portfolio/accounts"
-    content = requests.get(url, verify=False)
-    id = content.json()[0]["accountId"]
+def getAccountId(client:IBClient):
+    response = client.portfolio_accounts()
+    id = response[0]["accountId"]
     return id
 
-def getPositions(accountId):
+
+def getPositions(client:IBClient, accountId):
     pageId = 0
     positions = []
-
     while True:
-        url = baseUrl + "/portfolio/" + accountId + "/positions/" + str(pageId)
-        content = requests.get(url, verify=False)
-        for pos in content.json():
+        response = client.portfolio_account_positions(account_id=accountId, page_id=pageId)
+        for pos in response:
             positions.append(pos)
-        if len(content.json()) == 30:
+        if len(response) == 30:
             pageId += 1
         else:
             break
 
     return positions
 
-def getLastPrice(conids):
+def getLastPrice(client, conids):
     #TODO do a better job at authentication
     url = baseUrl + "/iserver/reauthenticate"
     content = requests.post(url, verify=False)
@@ -109,9 +107,14 @@ def writeGoogleSheet(positions):
         rows.append(row)
     spreadsheet.values_append(sheetName, {'valueInputOption': 'USER_ENTERED'}, {'values': rows})
 
+client = IBClient()
+client.validateSSO()
+client.reauthenticate()
+r = client.authentication_status()
 
-#accountId = getAccountId()
-#positions = getPositions(accountId)
+#accountId = getAccountId(client)
+#positions = getPositions(client, accountId)
 #writeGoogleSheet(positions)
-r = getLastPrice(["265598","37018770", "4762", "2586156"])
-print(r)
+conids = ["265598","37018770", "4762", "2586156"]
+r = client.market_data(conids)
+pprint(r)

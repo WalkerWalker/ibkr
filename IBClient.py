@@ -133,7 +133,7 @@ class IBClient:
 
         return content
 
-    def market_data(self, conids: List[str], since: str, fields: List[str]) -> Dict:
+    def market_data(self, conids: List[str], since: str = None, fields: List[str] = [31]) -> Dict:
         """
             Get Market Data for the given conid(s). The end-point will return by
             default bid, ask, last, change, change pct, close, listing exchange.
@@ -157,26 +157,16 @@ class IBClient:
         endpoint = r'iserver/marketdata/snapshot'
         req_type = 'GET'
 
-        # join the two list arguments so they are both a single string.
+        # define the parameters
         conids_joined = self._prepare_arguments_list(parameter_list=conids)
+        params = {'conids': conids_joined}
+
+        if since is not None:
+            params['since'] = since
 
         if fields is not None:
             fields_joined = ",".join(str(n) for n in fields)
-        else:
-            fields_joined = ""
-
-        # define the parameters
-        if since is None:
-            params = {
-                'conids': conids_joined,
-                'fields': fields_joined
-            }
-        else:
-            params = {
-                'conids': conids_joined,
-                'since': since,
-                'fields': fields_joined
-            }
+            params['fields'] = fields_joined
 
         content = self._make_request(endpoint=endpoint, req_type=req_type, params=params)
         return content

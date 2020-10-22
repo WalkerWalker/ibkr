@@ -199,7 +199,7 @@ class IBClient:
 
         return content
 
-    def validateSSO(self) -> Dict:
+    def validate_SSO(self) -> Dict:
         """Validates the current session for the SSO user."""
 
         # define request components

@@ -1,4 +1,3 @@
-import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
@@ -8,6 +7,7 @@ from pprint import pprint
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
+
 
 class Contract:
     def __init__(self, conid, ticker, expire, callput, strike, multiplier=100, currency="USD"):
@@ -28,9 +28,10 @@ class Position:
         self.premium = premium
         self.fee = fee
 
-    def updatePrice(self, stockPrice, optionPrice):
+    def update_price(self, stockPrice, optionPrice):
         #TODO
         pass
+
 
 class Order:
     def __init__(self, contract, size, price, side, tif="DAY"):
@@ -40,81 +41,71 @@ class Order:
         self.side = side
         self.tif = tif
 
-def getAccountId(client:IBClient):
+
+def get_account_id(client:IBClient):
     response = client.portfolio_accounts()
-    id = response[0]["accountId"]
-    return id
+    account_id = response[0]["accountId"]
+    return account_id
 
 
-def getPositions(client:IBClient, accountId):
-    pageId = 0
+def get_positions(client:IBClient, account_id):
+    page_id = 0
     positions = []
     while True:
-        response = client.portfolio_account_positions(account_id=accountId, page_id=pageId)
+        response = client.portfolio_account_positions(account_id=account_id, page_id=page_id)
         for pos in response:
             positions.append(pos)
         if len(response) == 30:
-            pageId += 1
+            page_id += 1
         else:
             break
 
     return positions
 
-def getLastPrice(client, conids):
-    #TODO do a better job at authentication
-    url = baseUrl + "/iserver/reauthenticate"
-    content = requests.post(url, verify=False)
 
-    url = baseUrl + "/iserver/accounts"
-    content = requests.get(url, verify=False)
-
-    url = baseUrl + "/iserver/marketdata/snapshot"
-    delimiter = ','
-    conids_list = delimiter.join(conids)
-    params ={"conids": conids_list,
-             "fields": "31"}
-    content = requests.get(url, params, verify=False)
-    content = requests.get(url, params, verify=False)  # run twice to get it right.
-    price_values = []
-    for item in content.json():
-        price_values.append({item['conid']: item['31']})
-    return price_values
-
-def getDateAndTime():
+def get_date_and_time():
     now = datetime.now()
     return now.strftime("%d/%m/%Y %H:%M:%S")
 
-def writeGoogleSheet(positions):
-    spreadSheetName = "Options Tracker"
-    sheetName = "Positions"
+
+def write_google_sheet(positions):
+    spread_sheet_name = "Options Tracker"
+    sheet_name = "Positions"
     scope = ["https://spreadsheets.google.com/feeds",
              "https://www.googleapis.com/auth/spreadsheets",
              "https://www.googleapis.com/auth/drive.file",
              "https://www.googleapis.com/auth/drive"]
     credential = ServiceAccountCredentials.from_json_keyfile_name("creds.json", scope)
     client = gspread.authorize(credential)
-    spreadsheet = client.open(spreadSheetName)
-    sheet = spreadsheet.worksheet(sheetName)
+    spreadsheet = client.open(spread_sheet_name)
+    sheet = spreadsheet.worksheet(sheet_name)
     headers = sheet.row_values(1)
     sheet.clear()
     sheet.append_row(headers)
     rows = []
     for pos in positions:
-        row = [getDateAndTime()]
+        row = [get_date_and_time()]
         for h in headers[1:]:
             value = str(pos[h]) if h in pos.keys() else ""
             row.append(value)
         rows.append(row)
-    spreadsheet.values_append(sheetName, {'valueInputOption': 'USER_ENTERED'}, {'values': rows})
+    spreadsheet.values_append(sheet_name, {'valueInputOption': 'USER_ENTERED'}, {'values': rows})
 
-client = IBClient()
-client.validateSSO()
-client.reauthenticate()
-r = client.authentication_status()
 
-#accountId = getAccountId(client)
-#positions = getPositions(client, accountId)
-#writeGoogleSheet(positions)
-conids = ["265598","37018770", "4762", "2586156"]
-r = client.market_data(conids)
-pprint(r)
+def main():
+    client = IBClient()
+    client.validate_SSO()
+    client.reauthenticate()
+    r = client.authentication_status()
+
+    account_id = get_account_id(client)
+    positions = get_positions(client, account_id)
+    pprint(positions)
+    #write_google_sheet()Sheet(positions)
+    #conids = ["265598","37018770", "4762", "2586156"]
+    #r = client.market_data(conids)
+    #pprint(r)
+
+
+if __name__ == '__main__':
+    main()

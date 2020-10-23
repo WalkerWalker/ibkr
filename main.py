@@ -12,22 +12,40 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
 class Contract:
-    def __init__(self, conid, ticker, expiry, put_or_call, strike, multiplier=100, currency="USD", und_conid=None):
+    def __init__(self, conid, asset_class, contract_desc, currency, mkt_price):
         self.conid = conid
-        self.ticker = ticker
-        self.expiry = expiry
-        self.put_or_call = put_or_call
-        self.strike = strike
-        self.multiplier = multiplier
+        self.asset_class = asset_class
+        self.contract_desc = contract_desc
         self.currency = currency
-        self.und_conid = und_conid
-        self.market_price = None
+        self.mkt_price = mkt_price
+        self.last_update = get_date_and_time()
+        self.und_conid = None  # und means underlying
         self.und_price = None
-        self.last_update = None
+
+        if self.asset_class == "STK":
+            self.ticker = contract_desc
+            self.expiry = None
+            self.strike = None
+            self.put_or_call = None
+            self.multiplier = None
+
+        else:
+            # parse description with the format "MCD    JAN2023 200 C [MCD   230120C00200000 100]"
+            desc_list = contract_desc.split()
+            self.ticker = desc_list[0]
+            self.expiry = desc_list[1]
+            self.strike = desc_list[2]
+            self.put_or_call = desc_list[3]
+            self.multiplier = desc_list[-1][:-1]  # omit the last "]" character
 
     def set_mkt_price(self, mkt_price):
         self.last_update = get_date_and_time()
-        self.market_price = mkt_price
+        self.mkt_price = mkt_price
+
+    def set_und_conid(self, und_conid):
+        # TODO for option and if und_conid is 0, request the und_conid from api
+        # TODO grab and set und_price
+        self.und_conid = und_conid
 
     def set_und_price(self, und_price):
         self.last_update = get_date_and_time()
@@ -45,24 +63,18 @@ class Position:
         # todo add check if field is there
         # todo check it's option or stock
         conid = json_dict["conid"]
-        ticker = json_dict["ticker"]
-        expiry = json_dict["expiry"]
-        put_or_call = json_dict['putOrCall']
-        strike = json_dict["strike"]
-        multiplier = json_dict["multiplier"]
+        asset_class = json_dict['assetClass']
         currency = json_dict["currency"]
-        und_conid = json_dict["undConid"]
-        contract = Contract(conid=conid,
-                            ticker=ticker,
-                            expiry=expiry,
-                            put_or_call=put_or_call,
-                            strike=strike,
-                            multiplier=multiplier,
-                            currency=currency,
-                            und_conid=und_conid)
-
+        contract_desc = json_dict["contractDesc"]
         mkt_price = json_dict["mktPrice"]
-        contract.set_mkt_price(mkt_price)
+        contract = Contract(conid=conid,
+                            asset_class=asset_class,
+                            contract_desc=contract_desc,
+                            currency=currency,
+                            mkt_price=mkt_price)
+
+        und_conid = json_dict["undConid"]
+        contract.set_und_conid(und_conid)
 
         size = json_dict["position"]
         avg_price = json_dict["avgPrice"]
@@ -70,7 +82,7 @@ class Position:
 
         return position
 
-    def to_json_dict(self, header : List[str]):
+    def to_json_dict(self, header: List[str]):
         json_dict = {}
         for field in header:
             if field == "lastUpdate":
@@ -90,7 +102,7 @@ class Position:
             elif field == "multiplier":
                 json_dict[field] = self.contract.multiplier
             elif field == "mktPrice":
-                json_dict[field] = self.contract.market_price
+                json_dict[field] = self.contract.mkt_price
             elif field == "undPrice":
                 json_dict[field] = self.contract.und_price
             elif field == "size":
@@ -113,11 +125,16 @@ class Order:
 def update_positions_mkt_price(client, positions: List[Position]):
     und_conids = [pos.contract.und_conid for pos in positions]
     conids = [pos.contract.conid for pos in positions]
-    prices = client.market_data(und_conids+conids)
+    all_conids = und_conids + conids
+    prices = client.market_data(all_conids)
+    prices_dict = {}
+    for json in prices:
+        prices_dict[json["conid"]] = json['31']
+    pprint(prices_dict)
     for pos in positions:
         contract = pos.contract
-        contract.set_mkt_price(prices[contract.conid])
-        contract.set_und_price(prices[contract.und_conid])
+        contract.set_mkt_price(prices_dict[contract.conid])
+        contract.set_und_price(prices_dict[contract.und_conid])
 
 
 def get_account_id(client:IBClient):
@@ -176,13 +193,16 @@ def main():
     client.validate_SSO()
     client.reauthenticate()
     r = client.authentication_status()
+    print(r)
 
     account_id = get_account_id(client)
     positions = get_positions(client, account_id)
-    Position.parse_json_dict(positions[0])
-    #pprint(positions)
+    update_positions_mkt_price(client, positions)
+    #json = positions[0].to_json_dict()
+    #pprint(json)
 
-    #write_google_sheet()Sheet(positions)
+    write_google_sheet(positions)
+
     #conids = ["265598","37018770", "4762", "2586156"]
     #r = client.market_data(conids)
     #pprint(r)

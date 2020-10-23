@@ -54,30 +54,6 @@ class IBClient:
             print('-' * 80)
             print('')
 
-    @staticmethod
-    def _prepare_arguments_list(self, parameter_list: List[str]) -> str:
-        """Prepares the arguments for the request.
-        Some endpoints can take multiple values for a parameter, this
-        method takes that list and creates a valid string that can be
-        used in an API request. The list can have either one index or
-        multiple indexes.
-        Arguments:
-        ----
-        parameter_list {List} -- A list of parameter values assigned to an argument.
-
-        Returns:
-        ----
-        {str} -- The joined list.
-        """
-
-        # validate it's a list. If not, return the parameter
-        if type(parameter_list) is list:
-            # specify the delimiter and join the list.
-            delimiter = ','
-            parameter_list = delimiter.join(parameter_list)
-
-        return parameter_list
-
     """
         PORTFOLIO ACCOUNTS ENDPOINTS
     """
@@ -159,15 +135,15 @@ class IBClient:
         req_type = 'GET'
 
         # define the parameters
-        conids_joined = self._prepare_arguments_list(parameter_list=conids)
-        params = {'conids': conids_joined}
+        params ={}
+        conids_joined = ",".join(str(id) for id in conids)
+        params['conids'] = conids_joined
+
+        fields_joined = ",".join(str(n) for n in fields)
+        params['fields'] = fields_joined
 
         if since is not None:
             params['since'] = since
-
-        if fields is not None:
-            fields_joined = ",".join(str(n) for n in fields)
-            params['fields'] = fields_joined
 
         content = self._make_request(endpoint=endpoint, req_type=req_type, params=params)
         return content

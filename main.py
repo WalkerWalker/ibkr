@@ -3,41 +3,70 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 from IBClient import IBClient
 from pprint import pprint
+from typing import Dict
+from typing import List
 
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
-from typing import Dict
-from typing import List
 
 class Contract:
-    def __init__(self, conid, ticker, expire, callput, strike, multiplier=100, currency="USD"):
+    def __init__(self, conid, ticker, expiry, put_or_call, strike, multiplier=100, currency="USD", und_conid=None):
         self.conid = conid
         self.ticker = ticker
-        self.expire = expire
-        self.callput = callput
+        self.expiry = expiry
+        self.put_or_call = put_or_call
         self.strike = strike
         self.multiplier = multiplier
         self.currency = currency
+        self.und_conid = und_conid
+        self.market_price = None
+        self.und_price = None
+
+    def set_mkt_price(self, mkt_price):
+        self.market_price = mkt_price
+
+    def set_und_price(self, und_price):
+        self.und_price = und_price
 
 
 class Position:
-    def __init__(self, contract, size, opendate, avgPrice):
+    def __init__(self, contract, size, avg_price):
         self.contract = contract
         self.size = size
-        self.opendate = opendate
-        self.avgPrice = avgPrice
-
-    def update_price(self, stockPrice, optionPrice):
-        #TODO
-        pass
+        self.avg_price = avg_price
 
     @staticmethod
     def parse_json(json: Dict):
-        #todo add check if field is there
+        # todo add check if field is there
+        # todo check it's option or stock
         conid = json["conid"]
-        pprint(json)
+        ticker = json["ticker"]
+        expiry = json["expiry"]
+        put_or_call = json['putOrCall']
+        strike = json["strike"]
+        multiplier = json["multiplier"]
+        currency = json["currency"]
+        und_conid = json["undConid"]
+        contract = Contract(conid=conid,
+                            ticker=ticker,
+                            expiry=expiry,
+                            put_or_call=put_or_call,
+                            strike=strike,
+                            multiplier=multiplier,
+                            currency=currency,
+                            und_conid=und_conid)
+
+        mkt_price = json["mktPrice"]
+        contract.set_mkt_price(mkt_price)
+
+        size = json["position"]
+        avg_price = json["avgPrice"]
+        position = Position(contract=contract, size=size, avg_price=avg_price)
+
+        return position
+
 
 class Order:
     def __init__(self, contract, size, price, side, tif="DAY"):

@@ -2,6 +2,7 @@ import requests
 
 from typing import Dict
 from typing import List
+from pprint import pprint
 
 
 class IBClient:
@@ -110,7 +111,7 @@ class IBClient:
 
         return content
 
-    def market_data(self, conids: List[str], since: str = None, fields: List[str] = [31]) -> Dict:
+    def market_data(self, conids: List[int], since: str = None, fields: List[str] = [31]) -> Dict:
         """
             Get Market Data for the given conid(s). The end-point will return by
             default bid, ask, last, change, change pct, close, listing exchange.
@@ -136,16 +137,17 @@ class IBClient:
 
         # define the parameters
         params ={}
-        conids_joined = ",".join(str(id) for id in conids)
+        conids_joined = ",".join(str(conid) for conid in conids)
         params['conids'] = conids_joined
 
-        fields_joined = ",".join(str(n) for n in fields)
+        fields_joined = ",".join(str(field) for field in fields)
         params['fields'] = fields_joined
 
         if since is not None:
             params['since'] = since
 
         content = self._make_request(endpoint=endpoint, req_type=req_type, params=params)
+        # TODO double check if the field is there. Retry if not.
         return content
 
     def reauthenticate(self) -> Dict:
@@ -199,3 +201,22 @@ class IBClient:
         content = self._make_request(endpoint=endpoint, req_type=req_type)
 
         return content
+
+    def contracts_definitions(self, conids: List[int]) -> List[Dict]:
+        """
+            Returns a list of security definitions for the given conids.
+            NAME: conids
+            DESC: A list of contract IDs you wish to get details for.
+            TYPE: List<Integer>
+            RTYPE: List<Dictionary>
+        """
+
+        # define the request components
+        endpoint = '/trsrv/secdef'
+        req_type = 'POST'
+        payload = {
+            'conids': conids
+            }
+        content = self._make_request(endpoint=endpoint, req_type=req_type, params=payload)
+
+        return content['secdef']

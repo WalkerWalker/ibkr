@@ -2,123 +2,14 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 from IBClient import IBClient
+from Position import Position
+
 from pprint import pprint
-from typing import Dict
 from typing import List
 
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
-
-
-class Contract:
-    def __init__(self, conid, asset_class, contract_desc, currency, mkt_price):
-        self.conid = conid
-        self.asset_class = asset_class
-        self.contract_desc = contract_desc
-        self.currency = currency
-        self.mkt_price = mkt_price
-        self.last_update = get_date_and_time()
-        self.und_conid = conid  # und means underlying, default for STK
-
-        # for option contract
-        self.ticker = None
-        self.expiry = None
-        self.strike = None
-        self.put_or_call = None
-        self.multiplier = None
-        self.und_price = None  # und means underlying
-
-    def set_mkt_price(self, mkt_price):
-        self.last_update = get_date_and_time()
-        self.mkt_price = mkt_price
-
-    def set_und_price(self, und_price):
-        self.last_update = get_date_and_time()
-        self.und_price = und_price
-
-    def set_detail(self, detail):
-        self.ticker = detail['ticker']
-
-        if self.asset_class == "OPT":
-            self.expiry = detail['expiry']
-            self.strike = detail['strike']
-            self.put_or_call = detail['putOrCall']
-            self.multiplier = detail['multiplier']
-            self.und_conid = detail['undConid']  # und means underlying
-
-
-class Position:
-    def __init__(self, contract, size, avg_price):
-        self.contract = contract
-        self.size = size
-        self.avg_price = avg_price
-
-    @staticmethod
-    def parse_json_dict(json_dict: Dict):
-        # todo add check if field is there
-        # todo check it's option or stock
-        size = json_dict["position"]
-        if size == 0:
-            return None
-
-        conid = json_dict["conid"]
-        asset_class = json_dict['assetClass']
-        currency = json_dict["currency"]
-        contract_desc = json_dict["contractDesc"]
-        mkt_price = json_dict["mktPrice"]
-        contract = Contract(conid=conid,
-                            asset_class=asset_class,
-                            contract_desc=contract_desc,
-                            currency=currency,
-                            mkt_price=mkt_price)
-
-        size = json_dict["position"]
-        avg_price = json_dict["avgPrice"]
-        position = Position(contract=contract, size=size, avg_price=avg_price)
-
-        return position
-
-    def to_json_dict(self, header: List[str]):
-        json_dict = {}
-        for field in header:
-            if field == "lastUpdate":
-                json_dict[field] = self.contract.last_update
-            elif field == "conid":
-                json_dict[field] = self.contract.conid
-            elif field == "ticker":
-                json_dict[field] = self.contract.ticker
-            elif field == "undConid":
-                json_dict[field] = self.contract.und_conid
-            elif field == "expiry":
-                json_dict[field] = self.contract.expiry
-            elif field == "putOrCall":
-                json_dict[field] = self.contract.put_or_call
-            elif field == "strike":
-                json_dict[field] = self.contract.strike
-            elif field == "multiplier":
-                json_dict[field] = self.contract.multiplier
-            elif field == 'currency':
-                json_dict[field] = self.contract.currency
-            elif field == "mktPrice":
-                json_dict[field] = self.contract.mkt_price
-            elif field == "undPrice":
-                json_dict[field] = self.contract.und_price
-            elif field == "size":
-                json_dict[field] = self.size
-            elif field == "avgPrice":
-                json_dict[field] = self.avg_price
-
-        return json_dict
-
-
-class Order:
-    def __init__(self, contract, size, price, side, tif="DAY"):
-        self.contract = contract
-        self.size = size
-        self.price = price
-        self.side = side
-        self.tif = tif
 
 
 def set_positions_detail(client, positions: List[Position]):
@@ -214,7 +105,7 @@ def main():
     #json = positions[0].to_json_dict()
     #pprint(json)
 
-    write_google_sheet(positions)
+    #write_google_sheet(positions)
 
     #conids = ["265598","37018770", "4762", "2586156"]
     #r = client.market_data(conids)

@@ -23,11 +23,14 @@ class Contract:
         self.und_conid = und_conid
         self.market_price = None
         self.und_price = None
+        self.last_update = None
 
     def set_mkt_price(self, mkt_price):
+        self.last_update = get_date_and_time()
         self.market_price = mkt_price
 
     def set_und_price(self, und_price):
+        self.last_update = get_date_and_time()
         self.und_price = und_price
 
 
@@ -38,17 +41,17 @@ class Position:
         self.avg_price = avg_price
 
     @staticmethod
-    def parse_json(json: Dict):
+    def parse_json_dict(json_dict: Dict):
         # todo add check if field is there
         # todo check it's option or stock
-        conid = json["conid"]
-        ticker = json["ticker"]
-        expiry = json["expiry"]
-        put_or_call = json['putOrCall']
-        strike = json["strike"]
-        multiplier = json["multiplier"]
-        currency = json["currency"]
-        und_conid = json["undConid"]
+        conid = json_dict["conid"]
+        ticker = json_dict["ticker"]
+        expiry = json_dict["expiry"]
+        put_or_call = json_dict['putOrCall']
+        strike = json_dict["strike"]
+        multiplier = json_dict["multiplier"]
+        currency = json_dict["currency"]
+        und_conid = json_dict["undConid"]
         contract = Contract(conid=conid,
                             ticker=ticker,
                             expiry=expiry,
@@ -58,14 +61,44 @@ class Position:
                             currency=currency,
                             und_conid=und_conid)
 
-        mkt_price = json["mktPrice"]
+        mkt_price = json_dict["mktPrice"]
         contract.set_mkt_price(mkt_price)
 
-        size = json["position"]
-        avg_price = json["avgPrice"]
+        size = json_dict["position"]
+        avg_price = json_dict["avgPrice"]
         position = Position(contract=contract, size=size, avg_price=avg_price)
 
         return position
+
+    def to_json_dict(self, header : List[str]):
+        json_dict = {}
+        for field in header:
+            if field == "lastUpdate":
+                json_dict[field] = self.contract.last_update
+            elif field == "conid":
+                json_dict[field] = self.contract.conid
+            elif field == "ticker":
+                json_dict[field] = self.contract.ticker
+            elif field == "undConid":
+                json_dict[field] = self.contract.und_conid
+            elif field == "expiry":
+                json_dict[field] = self.contract.expiry
+            elif field == "putOrCall":
+                json_dict[field] = self.contract.put_or_call
+            elif field == "strike":
+                json_dict[field] = self.contract.strike
+            elif field == "multiplier":
+                json_dict[field] = self.contract.multiplier
+            elif field == "mktPrice":
+                json_dict[field] = self.contract.market_price
+            elif field == "undPrice":
+                json_dict[field] = self.contract.und_price
+            elif field == "size":
+                json_dict[field] = self.size
+            elif field == "avgPrice":
+                json_dict[field] = self.avg_price
+
+        return json_dict
 
 
 class Order:
@@ -75,6 +108,16 @@ class Order:
         self.price = price
         self.side = side
         self.tif = tif
+
+
+def update_positions_mkt_price(client, positions: List[Position]):
+    und_conids = [pos.contract.und_conid for pos in positions]
+    conids = [pos.contract.conid for pos in positions]
+    prices = client.market_data(und_conids+conids)
+    for pos in positions:
+        contract = pos.contract
+        contract.set_mkt_price(prices[contract.conid])
+        contract.set_und_price(prices[contract.und_conid])
 
 
 def get_account_id(client:IBClient):
@@ -88,7 +131,8 @@ def get_positions(client:IBClient, account_id):
     positions = []
     while True:
         response = client.portfolio_account_positions(account_id=account_id, page_id=page_id)
-        positions.extend(response)
+        for pos_json in response:
+            positions.append(Position.parse_json_dict(pos_json))
         if len(response) == 30:
             page_id += 1
         else:
@@ -102,7 +146,7 @@ def get_date_and_time():
     return now.strftime("%d/%m/%Y %H:%M:%S")
 
 
-def write_google_sheet(positions):
+def write_google_sheet(positions: List[Position]):
     spread_sheet_name = "Options Tracker"
     sheet_name = "Positions"
     scope = ["https://spreadsheets.google.com/feeds",
@@ -118,9 +162,10 @@ def write_google_sheet(positions):
     sheet.append_row(headers)
     rows = []
     for pos in positions:
-        row = [get_date_and_time()]
-        for h in headers[1:]:
-            value = str(pos[h]) if h in pos.keys() else ""
+        pos_json_dict = Position.to_json_dict(pos, headers)
+        row = []
+        for h in headers:
+            value = str(pos_json_dict[h]) if h in pos_json_dict.keys() else ""
             row.append(value)
         rows.append(row)
     spreadsheet.values_append(sheet_name, {'valueInputOption': 'USER_ENTERED'}, {'values': rows})
@@ -134,7 +179,7 @@ def main():
 
     account_id = get_account_id(client)
     positions = get_positions(client, account_id)
-    Position.parse_json(positions[0])
+    Position.parse_json_dict(positions[0])
     #pprint(positions)
 
     #write_google_sheet()Sheet(positions)

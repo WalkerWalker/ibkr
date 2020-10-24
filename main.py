@@ -1,6 +1,5 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
 from IBClient import IBClient
 from Position import Position
 
@@ -61,11 +60,6 @@ def get_positions(client:IBClient, account_id):
     return positions
 
 
-def get_date_and_time():
-    now = datetime.now()
-    return now.strftime("%d/%m/%Y %H:%M:%S")
-
-
 def write_google_sheet(positions: List[Position]):
     spread_sheet_name = "Options Tracker"
     sheet_name = "Positions"
@@ -93,10 +87,6 @@ def write_google_sheet(positions: List[Position]):
 
 def main():
     client = IBClient()
-    client.validate_SSO()
-    client.reauthenticate()
-    client.authentication_status()
-    client.brokerage_accounts()
 
     account_id = get_account_id(client)
     positions = get_positions(client, account_id)
@@ -104,7 +94,7 @@ def main():
     set_positions_detail(client, positions)
     update_positions_mkt_price(client, positions)
 
-    write_google_sheet(positions)
+    #write_google_sheet(positions)
 
 
 if __name__ == '__main__':

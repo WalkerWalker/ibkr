@@ -34,7 +34,9 @@ class Position:
 
         return position
 
-    def to_json_dict(self, header: List[str]):
+    def to_json_dict(self, header=None):
+        if header is None:
+            header = ['conid', 'mktPrice', 'undPrice']
         json_dict = {}
         for field in header:
             if field == "lastUpdate":

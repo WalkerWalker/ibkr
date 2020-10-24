@@ -8,6 +8,35 @@ from pprint import pprint
 class IBClient:
     def __init__(self):
         self.baseUrl = "https://localhost:5000/v1/portal/"
+        self.authenticated = False
+        self.authenticated = self._authenticate()
+
+    def _authenticate(self) -> bool:
+        max_retries = 4
+        retries = 0
+
+        while max_retries > retries or self.authenticated is False:
+
+            auth_response = self.authentication_status()
+
+            if 'statusCode' in auth_response.keys() and auth_response['statusCode'] == 401:
+                print("Server isn't connected. Authentication Failed")
+                self.authenticated = False
+                return False
+
+            elif 'authenticated' in auth_response.keys() and auth_response['authenticated'] is True:
+                self.authenticated = True
+                return True
+
+            elif 'authenticated' in auth_response.keys() and auth_response['authenticated'] is False:
+                self.validate_SSO()
+                self.reauthenticate()
+                self.brokerage_accounts()
+                # self.authentication_status()
+
+            retries += 1
+
+        return self.authenticated
 
     def _build_url(self, endpoint):
         return self.baseUrl + endpoint
@@ -34,6 +63,7 @@ class IBClient:
         url = self._build_url(endpoint=endpoint)
         headers = {'Content-Type': 'application/json'}
 
+        response = None
         if req_type == 'POST' and params is not None:
             response = requests.post(url, headers=headers, json=params, verify=False)
         elif req_type == 'POST' and params is None:
@@ -108,7 +138,6 @@ class IBClient:
         endpoint = r'portfolio/{}/positions/{}'.format(account_id, page_id)
         req_type = 'GET'
         content = self._make_request(endpoint=endpoint, req_type=req_type)
-
         return content
 
     def market_data(self, conids: List[int], since: str = None, fields: List[str] = [31]) -> Dict:
@@ -147,7 +176,17 @@ class IBClient:
             params['since'] = since
 
         content = self._make_request(endpoint=endpoint, req_type=req_type, params=params)
-        # TODO double check if the field is there. Retry if not.
+
+        # retry if the field is not there
+        retry = False
+        for field in fields:
+            if field not in content[0].keys():
+                retry = True
+                break
+
+        if retry:
+            content = self._make_request(endpoint=endpoint, req_type=req_type, params=params)
+
         return content
 
     def reauthenticate(self) -> Dict:

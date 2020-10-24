@@ -63,5 +63,15 @@ class Position:
                 json_dict[field] = self.size
             elif field == "avgPrice":
                 json_dict[field] = self.avg_price
+            elif field == "dte":
+                json_dict[field] = self.contract.dte
+            elif field == "extrinsic":
+                json_dict[field] = self.contract.extrinsic
+            elif field == "intrinsic":
+                json_dict[field] = self.contract.intrinsic
+            elif field == "ann_extrinsic":
+                json_dict[field] = self.contract.ann_extrinsic
+            elif field == "target":
+                json_dict[field] = self.contract.target
 
         return json_dict

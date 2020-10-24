@@ -30,7 +30,7 @@ def update_positions_mkt_price(client, positions: List[Position]):
     prices_list = client.market_data(all_conids)
     prices_dict = {}
     for json in prices_list:
-        price = json['31'].strip("C") # 31 is the last price in ib api
+        price = float(json['31'].strip("C")) # 31 is the last price in ib api
         prices_dict[json["conid"]] = price
     for pos in positions:
         contract = pos.contract
@@ -95,21 +95,16 @@ def main():
     client = IBClient()
     client.validate_SSO()
     client.reauthenticate()
-    r = client.authentication_status()
+    client.authentication_status()
+    client.brokerage_accounts()
 
     account_id = get_account_id(client)
     positions = get_positions(client, account_id)
 
     set_positions_detail(client, positions)
     update_positions_mkt_price(client, positions)
-    #json = positions[0].to_json_dict()
-    #pprint(json)
 
-    #write_google_sheet(positions)
-
-    #conids = ["265598","37018770", "4762", "2586156"]
-    #r = client.market_data(conids)
-    #pprint(r)
+    write_google_sheet(positions)
 
 
 if __name__ == '__main__':

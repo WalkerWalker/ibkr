@@ -2,6 +2,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from IBClient import IBClient
 from Position import Position
+from Campaign import Campaign
 
 from pprint import pprint
 from typing import List
@@ -35,6 +36,20 @@ def update_positions_mkt_price(client, positions: List[Position]):
         contract = pos.contract
         contract.set_mkt_price(prices_dict[contract.conid])
         contract.set_und_price(prices_dict[contract.und_conid])
+
+
+def get_campaigns(positions: List[Position]):
+    campaigns = {}
+    for pos in positions:
+        und_conid = pos.contract.und_conid
+        if und_conid not in campaigns.keys():
+            ticker = pos.contract.ticker
+            currency = pos.contract.currency
+            campaign = Campaign(und_conid=und_conid, ticker=ticker, currency=currency)
+            campaigns[und_conid] = campaign
+
+        campaigns[und_conid].add_position(pos)
+    return campaigns
 
 
 def get_account_id(client:IBClient):
@@ -93,7 +108,10 @@ def main():
 
     set_positions_detail(client, positions)
     update_positions_mkt_price(client, positions)
+    campaigns = get_campaigns(positions)
 
+    for und_conid in campaigns.keys():
+        print(und_conid, len(campaigns[und_conid].positions))
     #write_google_sheet(positions)
 
 

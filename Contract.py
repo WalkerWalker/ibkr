@@ -2,7 +2,6 @@ from datetime import datetime
 
 
 class Contract:
-    ann_target = 0.1
 
     def __init__(self, conid, asset_class, contract_desc, currency, mkt_price):
         self.conid = conid
@@ -33,6 +32,11 @@ class Contract:
         now = datetime.now()
         return now.strftime("%d/%m/%Y %H:%M:%S")
 
+    @staticmethod
+    def _get_ann_target(dte):
+        # TODO: adjust ann_target by dte
+        return 0.1
+
     def _set_moneyness(self):
         expiry = datetime.strptime(self.expiry, "%Y%m%d")
         self.dte = (expiry - datetime.now()).days
@@ -42,7 +46,9 @@ class Contract:
             self.intrinsic = max(0, self.und_price-self.strike)
         self.extrinsic  = self.mkt_price - self.intrinsic
         self.ann_extrinsic = self.extrinsic/self.strike * (365/self.dte)
-        self.target = Contract.ann_target * self.strike * self.dte/365
+
+        ann_target = self._get_ann_target(self.dte)
+        self.target = ann_target * self.strike * self.dte/365
         self.target = round(self.target, 2)
 
     def set_mkt_price(self, mkt_price):

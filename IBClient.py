@@ -257,4 +257,77 @@ class IBClient:
             }
         content = self._make_request(endpoint=endpoint, req_type=req_type, params=payload)
 
-        return content['secdef']
+        return content['secdef']  # return the list of contract definitions, instead of a dictionary
+
+    def place_order(self, account_id: str, order: Dict, confirm=True) -> Dict:
+        """
+            Please note here, sometimes this end-point alone can't make sure you submit the order
+            successfully, you could receive some questions in the response, you have to to answer
+            them in order to submit the order successfully. You can use "/iserver/reply/{replyid}"
+            end-point to answer questions.
+            NAME: account_id
+            DESC: The account ID you wish to place an order for.
+            TYPE: String
+            NAME: order
+            DESC: Either an IBOrder object or a dictionary with the specified payload.
+            TYPE: IBOrder or Dict
+        """
+
+        # define request components
+        endpoint = r'iserver/account/{}/order'.format(account_id)
+        req_type = 'POST'
+        content = self._make_request(
+            endpoint=endpoint,
+            req_type=req_type,
+            params=order
+        )
+        if confirm:
+            while True:
+                question = content[0]  # TDDO: add check
+                if 'id' in question:
+                    reply_id = question['id']
+                    content = self.place_order_reply(reply_id, True)
+                else:
+                    break
+        return content
+
+    def place_orders(self, account_id: str, orders: Dict[str, List[Dict]]) -> Dict:
+        """
+            An extension of the `place_order` endpoint but allows for a list of orders. Those orders may be
+            either a list of dictionary objects or a list of IBOrder objects.
+            NAME: account_id
+            DESC: The account ID you wish to place an order for.
+            TYPE: String
+            NAME: orders
+            DESC: Either a list of IBOrder objects or a list of dictionaries with the specified payload.
+            TYPE: List<IBOrder Object> or List<Dictionary>
+        """
+
+        # define request components
+        endpoint = r'iserver/account/{}/orders'.format(account_id)
+        req_type = 'POST'
+        content = self._make_request(
+            endpoint=endpoint,
+            req_type=req_type,
+            params=orders
+        )
+
+        return content
+
+    def place_order_reply(self, reply_id: str = None, reply: bool = True):
+        """
+            Reply to questions when placing orders and submit orders
+        """
+
+        # define request components
+        endpoint = r'iserver/reply/{}'.format(reply_id)
+        req_type = 'POST'
+        reply = {'confirmed': reply}
+
+        content = self._make_request(
+            endpoint=endpoint,
+            req_type=req_type,
+            params=reply
+        )
+
+        return content

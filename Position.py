@@ -8,6 +8,7 @@ class Position:
         self.contract = contract
         self.size = size
         self.avg_price = avg_price
+        self.type = None
 
     @staticmethod
     def parse_json_dict(json_dict: Dict):
@@ -20,11 +21,9 @@ class Position:
         conid = json_dict["conid"]
         asset_class = json_dict['assetClass']
         currency = json_dict["currency"]
-        contract_desc = json_dict["contractDesc"]
         mkt_price = json_dict["mktPrice"]
         contract = Contract(conid=conid,
                             asset_class=asset_class,
-                            contract_desc=contract_desc,
                             currency=currency,
                             mkt_price=mkt_price)
 
@@ -77,3 +76,37 @@ class Position:
                 json_dict[field] = self.contract.target
 
         return json_dict
+
+    def set_type(self):
+        self.type = self._get_type()
+
+    def _get_type(self) -> str:
+        if self.contract.asset_class == "STK":
+            if self.size > 0:
+                return "LONG STK"
+            elif self.size < 0:
+                return "SHORT STK"
+        elif self.contract.put_or_call == "P":
+            if self.size > 0:
+                return "LONG PUT"
+            elif self.size < 0:
+                return "SHORT PUT"
+        elif self.contract.put_or_call == "C":
+            if self.size > 0:
+                return "LONG CALL"
+            elif self.size < 0:
+                return "SHORT CALL"
+
+        return "NIL"
+
+    def get_close_order_json(self) -> Dict:
+        order = {}
+        order["conid"] = self.contract.conid
+        order["secType"] = str(self.contract.conid) + ":" + self.contract.asset_class
+        order["cOID"] = "N" + str(self.contract.conid)
+        order["orderType"] = "LMT"
+        order["price"] = self.contract.target
+        order["side"] = "BUY" if self.size < 0 else "SELL"
+        order["quantity"] = abs(self.size)
+        order["tif"] = "DAY"
+        return order

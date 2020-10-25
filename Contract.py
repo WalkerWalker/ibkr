@@ -3,10 +3,9 @@ from datetime import datetime
 
 class Contract:
 
-    def __init__(self, conid, asset_class, contract_desc, currency, mkt_price):
+    def __init__(self, conid, asset_class, currency, mkt_price):
         self.conid = conid
         self.asset_class = asset_class
-        self.contract_desc = contract_desc
         self.currency = currency
         self.mkt_price = mkt_price
         self.last_update = self._date_and_time()
@@ -44,7 +43,7 @@ class Contract:
             self.intrinsic = max(0, -self.und_price+self.strike)
         else:
             self.intrinsic = max(0, self.und_price-self.strike)
-        self.extrinsic  = self.mkt_price - self.intrinsic
+        self.extrinsic = self.mkt_price - self.intrinsic
         self.ann_extrinsic = self.extrinsic/self.strike * (365/self.dte)
 
         ann_target = self._get_ann_target(self.dte)

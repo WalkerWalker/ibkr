@@ -22,6 +22,7 @@ def set_positions_detail(client, positions: Dict[int, Position]):
         pos = positions[conid]
         contract = pos.contract
         contract.set_detail(detail_dict[conid])
+        pos.set_type()
 
 
 def update_positions_mkt_price(client, positions: Dict[int, Position]):
@@ -113,8 +114,16 @@ def main():
     update_positions_mkt_price(client, positions)
     campaigns = get_campaigns(positions)
 
+    target_orders = []
     for und_conid in campaigns.keys():
-        print(und_conid, len(campaigns[und_conid].positions))
+        camp = campaigns[und_conid]
+        target_orders.extend(camp.get_target_orders())
+
+    #pprint(target_orders)
+    #response = client.place_order(account_id=account_id, order=target_orders[0])
+    for order in target_orders:
+        response = client.place_order(account_id=account_id, order=order)
+        pprint(response)
     #write_google_sheet(positions)
 
 

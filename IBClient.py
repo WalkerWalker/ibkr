@@ -140,7 +140,7 @@ class IBClient:
         content = self._make_request(endpoint=endpoint, req_type=req_type)
         return content
 
-    def market_data(self, conids: List[int], since: str = None, fields: List[str] = [31]) -> Dict:
+    def market_data(self, conids: List[int], since: str = None, fields: List[str] = ['31']) -> Dict:
         """
             Get Market Data for the given conid(s). The end-point will return by
             default bid, ask, last, change, change pct, close, listing exchange.
@@ -176,7 +176,6 @@ class IBClient:
             params['since'] = since
 
         content = self._make_request(endpoint=endpoint, req_type=req_type, params=params)
-
         # retry if the field is not there
         retry = False
         for field in fields:

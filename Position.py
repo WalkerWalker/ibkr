@@ -103,7 +103,7 @@ class Position:
         order = {}
         order["conid"] = self.contract.conid
         order["secType"] = str(self.contract.conid) + ":" + self.contract.asset_class
-        order["cOID"] = "N" + str(self.contract.conid)
+        # order["cOID"] = "CLOSE-" + str(self.contract.conid)
         order["orderType"] = "LMT"
         order["price"] = self.contract.target
         order["side"] = "BUY" if self.size < 0 else "SELL"

@@ -104,6 +104,62 @@ def write_google_sheet(positions: Dict[int, Position]):
     spreadsheet.values_append(sheet_name, {'valueInputOption': 'USER_ENTERED'}, {'values': rows})
 
 
+def clear_orders(client, account_id: str):
+    orders = client.get_live_orders()
+    for order in orders["orders"]:
+        if order["status"] not in {"Cancelled", "Inactive"}:
+            order_id = order["orderId"]
+            response = client.delete_order(account_id=account_id, order_id=order_id)
+
+
+def place_order_with_confirm(client, account_id, order):
+    # look if order_ref is occupied.
+    # order_ref = order['cOID']
+    # occupied = False
+    # orders = client.get_live_orders()
+    # for live_order in orders["orders"]:
+    #     if live_order["order_ref"] == order_ref:
+    #         occupied = True
+    #         print(live_order)
+    #         live_order_id = live_order['orderId']
+    #         client.delete_order(account_id, live_order_id)
+    #         break
+    #
+    # # if order_ref is occupied, use the order_id to modify order, otherwise place a new order
+    # if occupied:
+    #     content = client.modify_order(account_id=account_id, local_order_id=order_ref, order=order)
+    # else:
+    #     content = client.place_order(account_id=account_id, order=order)
+    #
+    # if content is None:
+    #     print(occupied)
+
+    content = client.place_order(account_id=account_id, order=order)
+    while True:
+        question = content[0]  # TODO: add check
+        if 'id' in question:
+            reply_id = question['id']
+            content = client.place_order_reply(reply_id, True)
+        else:
+            break
+    return content
+
+
+def clear_and_place_target_orders(client, account_id: str, campaigns: Dict[int, Campaign]):
+    clear_orders(client, account_id)
+    target_orders = []
+    for und_conid in campaigns.keys():
+        camp = campaigns[und_conid]
+        target_orders.extend(camp.get_target_orders())
+
+    for order in target_orders:
+        response = place_order_with_confirm(client, account_id, order)
+        pprint(response)
+
+    #orders = client.get_live_orders()
+    #pprint(orders["orders"])
+
+
 def main():
     client = IBClient()
 
@@ -114,16 +170,16 @@ def main():
     update_positions_mkt_price(client, positions)
     campaigns = get_campaigns(positions)
 
-    target_orders = []
-    for und_conid in campaigns.keys():
-        camp = campaigns[und_conid]
-        target_orders.extend(camp.get_target_orders())
+    # clear_orders(client, account_id)
+    # orders = client.get_live_orders()
+    # for order in orders['orders']:
+    #     if order['status'] not in {"Cancelled", "Inactive"}:
+    #         pprint(order)
+    #     else:
+    #         pprint(order['order_ref'])
+    clear_and_place_target_orders(client, account_id, campaigns)
 
-    #pprint(target_orders)
-    #response = client.place_order(account_id=account_id, order=target_orders[0])
-    for order in target_orders:
-        response = client.place_order(account_id=account_id, order=order)
-        pprint(response)
+
     #write_google_sheet(positions)
 
 

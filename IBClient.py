@@ -72,6 +72,8 @@ class IBClient:
             response = requests.get(url, headers=headers, params=params, verify=False)
         elif req_type == 'GET' and params is None:
             response = requests.get(url, headers=headers, verify=False)
+        elif req_type == 'DELETE':
+            response = requests.delete(url, headers=headers, verify=False)
 
         if response.ok:
             return response.json()
@@ -281,20 +283,12 @@ class IBClient:
             req_type=req_type,
             params=order
         )
-        if confirm:
-            while True:
-                question = content[0]  # TDDO: add check
-                if 'id' in question:
-                    reply_id = question['id']
-                    content = self.place_order_reply(reply_id, True)
-                else:
-                    break
         return content
 
     def place_orders(self, account_id: str, orders: Dict[str, List[Dict]]) -> Dict:
         """
             An extension of the `place_order` endpoint but allows for a list of orders. Those orders may be
-            either a list of dictionary objects or a list of IBOrder objects.
+            either a list of dictionary objects or a list of IBOrder objects. SO FAR IT DOES NOT WORK
             NAME: account_id
             DESC: The account ID you wish to place an order for.
             TYPE: String
@@ -328,6 +322,73 @@ class IBClient:
             endpoint=endpoint,
             req_type=req_type,
             params=reply
+        )
+
+        return content
+
+    def get_live_orders(self):
+        """
+            The end-point is meant to be used in polling mode, e.g. requesting every
+            x seconds. The response will contain two objects, one is notification, the
+            other is orders. Orders is the list of orders (cancelled, filled, submitted)
+            with activity in the current day. Notifications contains information about
+            execute orders as they happen, see status field.
+        """
+
+        # define request components
+        endpoint = r'iserver/account/orders'
+        req_type = 'GET'
+        content = self._make_request(
+            endpoint=endpoint,
+            req_type=req_type
+        )
+
+        return content
+
+    def delete_order(self, account_id: str, order_id: str) -> Dict:
+        """Deletes the order specified by the customer order ID.
+        NOTICE: it should actually be order ID, not customer order id as specified in the doc
+        NAME: account_id
+        DESC: The account ID you wish to place an order for.
+        TYPE: String
+        NAME: order_id
+        DESC: The order ID for the order you wish to DELETE.
+        TYPE: String
+        """
+
+        # define request components
+        endpoint = r'iserver/account/{}/order/{}'.format(
+            account_id, order_id)
+        req_type = 'DELETE'
+        content = self._make_request(
+            endpoint=endpoint,
+            req_type=req_type
+        )
+
+        return content
+
+    def modify_order(self, account_id: str, local_order_id: str, order: Dict) -> Dict:
+        """
+            Modifies an open order. The /iserver/accounts endpoint must first
+            be called.
+            NAME: account_id
+            DESC: The account ID you wish to place an order for.
+            TYPE: String
+            NAME: local_order_id
+            DESC: The customer order ID for the order you wish to MODIFY.
+            TYPE: String
+            NAME: order
+            DESC: Either an IBOrder object or a dictionary with the specified payload.
+            TYPE: IBOrder or Dict
+        """
+
+        # define request components
+        endpoint = r'iserver/account/{}/order/{}'.format(account_id, local_order_id)
+        req_type = 'POST'
+        content = self._make_request(
+            endpoint=endpoint,
+            req_type=req_type,
+            params=order
         )
 
         return content
